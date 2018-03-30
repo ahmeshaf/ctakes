@@ -212,7 +212,7 @@ public class MeasurementFSM {
 				false);
 		Condition shortTextCondition = new WordSetCondition(iv_shortTextSet,
 				false);
-
+		Condition timesCondition = new WordValueCondition("x", false);
 		startState.addTransition(numberCondition, quanitityState);
 		startState.addTransition(rangeCondition, quanitityState);
 		startState.addTransition(numberTextCondition, quanitityState);
