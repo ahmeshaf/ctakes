@@ -398,7 +398,7 @@ public class TokenizerPTB {
 			        	// There could be a hyphen before the next white space,
 			        	// or a symbol before the next whitespace
 			        	// or apostrophe like in 80's or P'yongyang (one token each) or James' or Ted's (2 tokens each)
-			        	// Take alphanums, but consider hyphenated words and names with apostrophes 
+			        	// Take alphanums, but consider hyphenated words and names with apostrophes
 			        	// and consider tele numbers and postal codes
 
 			        	//				    if (true) { // TBD comment out this debug code
@@ -418,6 +418,7 @@ public class TokenizerPTB {
 			        	    tokenClass = wordTokenOrNumToken(lowerCasedText, currentPosition, tokenLen);
 			        	} else if (nextNonNumericChar > 0 && (len = lenIfIsNumberContainingComma(currentPosition, lowerCasedText, nextNonNumericChar)) > 0) {
 			        	    tokenLen = len;
+			        	    tokenClass = NumToken.class;
 			        	    tokenClass = NumToken.class;
 			        	} else if (nextNonLetterDigitApostrophe < lowerCasedText.length() && lowerCasedText.charAt(nextNonLetterDigitApostrophe)==PERIOD) {
 			        	    // see if is a number with a decimal place (without commas, comma-containing numbers are handled above)
