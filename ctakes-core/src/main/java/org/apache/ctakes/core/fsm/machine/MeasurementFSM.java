@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.ctakes.core.fsm.condition.IntegerRangeCondition;
 import org.apache.ctakes.core.fsm.condition.NumberCondition;
 import org.apache.ctakes.core.fsm.condition.PunctuationValueCondition;
+import org.apache.ctakes.core.fsm.condition.WordValueCondition;
 import org.apache.ctakes.core.fsm.condition.RangeCondition;
 import org.apache.ctakes.core.fsm.condition.WordSetCondition;
 import org.apache.ctakes.core.fsm.output.MeasurementToken;
@@ -202,7 +203,7 @@ public class MeasurementFSM {
 
 		Machine m = new Machine(startState);
 		State quanitityState = new NamedState("QUANITITY");
-
+		State timesState = new NamedState("TIMES");
 		Condition numberCondition = new NumberCondition();
 		Condition numberTextCondition = new WordSetCondition(iv_textNumberSet,
 				false);
@@ -211,7 +212,7 @@ public class MeasurementFSM {
 				false);
 		Condition shortTextCondition = new WordSetCondition(iv_shortTextSet,
 				false);
-
+		Condition timesCondition = new WordValueCondition("x", false);
 		startState.addTransition(numberCondition, quanitityState);
 		startState.addTransition(rangeCondition, quanitityState);
 		startState.addTransition(numberTextCondition, quanitityState);
@@ -219,7 +220,13 @@ public class MeasurementFSM {
 
 		quanitityState.addTransition(fullTextCondition, endState);
 		quanitityState.addTransition(shortTextCondition, endState);
+        quanitityState.addTransition(timesCondition, timesState);
 		quanitityState.addTransition(new AnyCondition(), startState);
+
+		timesState.addTransition(numberCondition, quanitityState);
+        timesState.addTransition(rangeCondition, quanitityState);
+        timesState.addTransition(numberTextCondition, quanitityState);
+        timesState.addTransition(new AnyCondition(), startState);
 
 		endState.addTransition(new AnyCondition(), startState);
 
