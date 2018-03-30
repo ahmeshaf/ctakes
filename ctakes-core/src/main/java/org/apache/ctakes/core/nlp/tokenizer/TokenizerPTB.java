@@ -55,8 +55,10 @@ import org.apache.ctakes.typesystem.type.syntax.WordToken;
  * @author Mayo Clinic
  */
 public class TokenizerPTB {
-    
-    	/**
+
+    private static final char X_LETTER = 'x';
+
+    /**
 	 * Constructor
 	 */
 	public TokenizerPTB() {
@@ -89,7 +91,7 @@ public class TokenizerPTB {
 		currentPosition = findFirstCharOfNextToken(textSegment, currentPosition);
 		// if input contained only white space but not even any newlines, return empty token list 
 		if (currentPosition < 0) return emptyTokenList;
-		
+        boolean isMeasurement = false;
 		while ((currentPosition = findFirstCharOfNextToken(textSegment, currentPosition))>=0) {
 		
 			// get current character and the one after that, which is used in making a number
@@ -199,12 +201,18 @@ public class TokenizerPTB {
 			    tokenLen = 1; 
 			    tokenClass = PunctuationToken.class;
 			} 
-			
+			else if (firstCharOfToken == X_LETTER && isMeasurement) {
+                tokenLen = 1;
+                tokenClass = WordToken.class;
+                isMeasurement = false;
+            }
 			else if (isLetterOrDigit(firstCharOfToken)) {
 
 			    boolean obviouslyIsWord = true; // until we find a non alphanum before a whitespace
 			    boolean obviouslyIsNumber = true; // until we find a non digit before a whitespace
-			    int nextWhitespaceOrEndOfSegment = -1;
+                boolean obviouslyIsMeasurement = true; // until we find a non digit other than x before a whitespace
+                boolean maybeIsMeasurement = false;
+				int nextWhitespaceOrEndOfSegment = -1;
 			    int nextNonLetterOrNonDigit = -1;
 			    int nextNonLetterDigitApostrophe = -1;
 			    int nextNonTelephoneOrPostalChar = -1; // digits and dash aka hyphen
@@ -244,7 +252,13 @@ public class TokenizerPTB {
 				    obviouslyIsNumber = false; // not sure if it will be number all the way to whitespace
 				    // since passed nextNonLetterOrNonDigit test above, must be letter, so nextNonLetterOrNonDigit is not changed here
 				    // since passed !isLetterOrDigit test above, must be letter, so nextNonLetterDigitApostrophe is not changed here
-				    if (nextNonDigit < 0) nextNonDigit = i;
+
+                    if (ch != 'x')
+				        obviouslyIsMeasurement = false;
+                    else
+                        maybeIsMeasurement = true;
+
+                    if (nextNonDigit < 0) nextNonDigit = i;
 				    if (nextNonTelephoneOrPostalChar < 0 && !isTelephoneNumberChar(ch)) {
 					nextNonTelephoneOrPostalChar = i;
 				    }
@@ -271,7 +285,7 @@ public class TokenizerPTB {
 			    if (obviouslyIsNumber) {
 				    tokenLen = nextWhitespaceOrEndOfSegment - currentPosition;
 				    tokenClass = NumToken.class;
-			    } else if (obviouslyIsWord) {
+			    } else if (obviouslyIsWord && !obviouslyIsMeasurement) {
 				// Check for things like "cannot" and "gonna" that appear to be one token but
 				// are supposed to be more than one according to PTB rules.
 				String lowerCasedSubstring = textSegment.substring(currentPosition, nextWhitespaceOrEndOfSegment).toLowerCase();
@@ -383,7 +397,7 @@ public class TokenizerPTB {
 			        	// There could be a hyphen before the next white space,
 			        	// or a symbol before the next whitespace
 			        	// or apostrophe like in 80's or P'yongyang (one token each) or James' or Ted's (2 tokens each)
-			        	// Take alphanums, but consider hyphenated words and names with apostrophes 
+			        	// Take alphanums, but consider hyphenated words and names with apostrophes
 			        	// and consider tele numbers and postal codes
 
 			        	//				    if (true) { // TBD comment out this debug code
@@ -404,6 +418,7 @@ public class TokenizerPTB {
 			        	} else if (nextNonNumericChar > 0 && (len = lenIfIsNumberContainingComma(currentPosition, lowerCasedText, nextNonNumericChar)) > 0) {
 			        	    tokenLen = len;
 			        	    tokenClass = NumToken.class;
+			        	    tokenClass = NumToken.class;
 			        	} else if (nextNonLetterDigitApostrophe < lowerCasedText.length() && lowerCasedText.charAt(nextNonLetterDigitApostrophe)==PERIOD) {
 			        	    // see if is a number with a decimal place (without commas, comma-containing numbers are handled above)
 			        	    if (nextNonDigit==lowerCasedText.length()-1) {
@@ -421,7 +436,14 @@ public class TokenizerPTB {
 			        		tokenLen = nextNonLetterOrNonDigit - currentPosition;
 			        		tokenClass = wordTokenOrNumToken(lowerCasedText, currentPosition, tokenLen);
 			        	    }
-			        	} else { // breaking character is not - character and not ' character, so stop there
+			        	} else if (maybeIsMeasurement && obviouslyIsMeasurement) {
+                            String lowerCasedSubstring = lowerCasedText.substring(currentPosition, nextWhitespaceOrEndOfSegment);
+                            len = MeasurementPTB.tokenLengthCheckingForMeasurementTerms(lowerCasedSubstring);
+                            tokenLen = len;
+                            isMeasurement = true;
+                            if (tokenLen < 0) throw new RuntimeException("tokenLen = " + tokenLen + " currentPosition = " + currentPosition + " nextNonLetterOrNonDigit = " + nextNonLetterOrNonDigit);
+                            tokenClass = wordTokenOrNumToken(lowerCasedText, currentPosition, tokenLen);
+                        } else { // breaking character is not - character and not ' character, so stop there
 			        	    tokenLen = nextNonLetterOrNonDigit - currentPosition;
 			        	    tokenClass = wordTokenOrNumToken(lowerCasedText, currentPosition, tokenLen);
 			        	}
