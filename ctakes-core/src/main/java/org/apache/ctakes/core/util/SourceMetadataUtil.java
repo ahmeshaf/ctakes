@@ -48,15 +48,6 @@ final public class SourceMetadataUtil {
    }
 
    /**
-    * @param jCas      ye olde
-    * @param patientId the patient identifier for the source
-    */
-   static public void setPatientIdentifier( final JCas jCas, final String patientId ) {
-      final Metadata metadata = getOrCreateMetadata( jCas );
-      metadata.setPatientIdentifier( patientId );
-   }
-
-   /**
     * @param jcas ye olde jay-cas
     * @return the patient id for the source or {@link #UNKNOWN_PATIENT_NUM} if one is not found
     */

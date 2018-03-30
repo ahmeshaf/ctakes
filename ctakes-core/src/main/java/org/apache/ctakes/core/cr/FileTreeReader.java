@@ -4,7 +4,6 @@ import org.apache.ctakes.core.config.ConfigParameterConstants;
 import org.apache.ctakes.core.patient.PatientNoteStore;
 import org.apache.ctakes.core.pipeline.PipeBitInfo;
 import org.apache.ctakes.core.resource.FileLocator;
-import org.apache.ctakes.core.util.SourceMetadataUtil;
 import org.apache.ctakes.typesystem.type.structured.DocumentID;
 import org.apache.ctakes.typesystem.type.structured.DocumentIdPrefix;
 import org.apache.ctakes.typesystem.type.structured.DocumentPath;
@@ -119,7 +118,6 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
    private File _rootDir;
    private Collection<String> _validExtensions;
    private List<File> _files;
-   private Map<File, String> _filePatients;
    private int _currentIndex;
    private Map<String, Integer> _patientDocCounts = new HashMap<>();
 
@@ -138,13 +136,11 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
       _currentIndex = 0;
       if ( _rootDir.isFile() ) {
          // does not check for valid extensions.  With one file just trust the user.
-         final String patient = _rootDir.getParentFile().getName();
          _files = Collections.singletonList( _rootDir );
-         _filePatients = Collections.singletonMap( _rootDir, patient );
+         final String patient = _rootDir.getParentFile().getName();
          PatientNoteStore.getInstance().setWantedDocCount( patient, 1 );
       } else {
          // gather all of the files and set the document counts per patient.
-         _filePatients = new HashMap<>();
          _files = getDescendentFiles( _rootDir, _validExtensions, 0 );
          _patientDocCounts.forEach( ( k, v ) -> PatientNoteStore.getInstance().setWantedDocCount( k, v ) );
       }
@@ -179,9 +175,7 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
     * @param level directory level beneath the root directory
     * @return List of files descending from the parent directory
     */
-   private List<File> getDescendentFiles( final File parentDir,
-                                          final Collection<String> validExtensions,
-                                          final int level ) {
+   private List<File> getDescendentFiles( final File parentDir, final Collection<String> validExtensions, final int level ) {
       final File[] children = parentDir.listFiles();
       if ( children == null || children.length == 0 ) {
          return Collections.emptyList();
@@ -197,8 +191,6 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
             descendentFiles.add( child );
          }
       }
-      // TODO copy in TextNumberComparator and delegate ...
-//      Collections.sort( descendentFiles, FileComparator );
       for ( File childDir : childDirs ) {
          descendentFiles.addAll( getDescendentFiles( childDir, validExtensions, level + 1 ) );
       }
@@ -206,7 +198,6 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
          final String patientId = parentDir.getName();
          final int count = _patientDocCounts.getOrDefault( patientId, 0 );
          _patientDocCounts.put( patientId, count + descendentFiles.size() );
-         descendentFiles.forEach( f -> _filePatients.put( f, patientId ) );
       }
       return descendentFiles;
    }
@@ -311,8 +302,6 @@ final public class FileTreeReader extends JCasCollectionReader_ImplBase {
       final String idPrefix = createDocumentIdPrefix( file, _rootDir );
       documentIdPrefix.setDocumentIdPrefix( idPrefix );
       documentIdPrefix.addToIndexes();
-      final String patientId = _filePatients.get( file );
-      SourceMetadataUtil.setPatientIdentifier( jcas, patientId );
       final DocumentPath documentPath = new DocumentPath( jcas );
       documentPath.setDocumentPath( file.getAbsolutePath() );
       documentPath.addToIndexes();
